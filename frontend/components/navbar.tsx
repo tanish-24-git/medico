@@ -40,35 +40,46 @@ export function Navbar() {
           </Link>
         </div>
 
-        {user ? (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="relative h-9 w-9 rounded-full">
-                <Avatar className="h-9 w-9">
-                  <AvatarImage src={user.photoURL || ''} alt={user.displayName || ''} />
-                  <AvatarFallback>{user.displayName?.charAt(0) || 'U'}</AvatarFallback>
-                </Avatar>
+        <div className="flex items-center gap-3">
+          {!user ? (
+            <>
+              <Button 
+                variant="ghost"
+                onClick={() => signInWithGoogle()} 
+                className="text-foreground/70 hover:text-foreground"
+              >
+                Login
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuItem className="flex flex-col items-start gap-1">
-                <span className="text-sm font-medium">{user.displayName}</span>
-                <span className="text-xs text-muted-foreground">{user.email}</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => logout()} className="text-destructive focus:text-destructive">
-                <LogOut className="mr-2 h-4 w-4" />
-                <span>Log out</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        ) : (
-          <Button 
-            onClick={() => signInWithGoogle()} 
-            className="bg-primary text-primary-foreground hover:bg-primary/90"
-          >
-            Sign In
-          </Button>
-        )}
+              <Button 
+                onClick={() => signInWithGoogle()} 
+                className="bg-primary text-primary-foreground hover:bg-primary/90"
+              >
+                Sign Up
+              </Button>
+            </>
+          ) : (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="relative h-9 w-9 rounded-full">
+                  <Avatar className="h-9 w-9">
+                    <AvatarImage src={user.photoURL || ''} alt={user.displayName || ''} />
+                    <AvatarFallback>{user.displayName?.charAt(0) || 'U'}</AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuItem className="flex flex-col items-start gap-1">
+                  <span className="text-sm font-medium">{user.displayName}</span>
+                  <span className="text-xs text-muted-foreground">{user.email}</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => logout()} className="text-destructive focus:text-destructive">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Log out</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
       </div>
     </nav>
   );

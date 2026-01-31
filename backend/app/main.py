@@ -14,7 +14,6 @@ from app.config.settings import settings
 from app.config.firebase import firebase_config
 from app.core.middleware import (
     RequestLoggingMiddleware,
-    SecurityHeadersMiddleware,
     limiter,
     rate_limit_exceeded_handler
 )
@@ -87,7 +86,6 @@ app.add_middleware(
 
 # Add custom middleware
 app.add_middleware(RequestLoggingMiddleware)
-app.add_middleware(SecurityHeadersMiddleware)
 
 
 # Exception handlers
