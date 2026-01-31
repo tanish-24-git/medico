@@ -1,0 +1,97 @@
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: medico-postgres
+    environment:
+      POSTGRES_USER: medico
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-medico_secure_password}
+      POSTGRES_DB: medico
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U medico"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - medico-network
+    restart: unless-stopped
+
+  # FastAPI Backend
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: medico-backend
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://medico:${POSTGRES_PASSWORD:-medico_secure_password}@postgres:5432/medico
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - PINECONE_API_KEY=${PINECONE_API_KEY}
+      - PINECONE_ENVIRONMENT=${PINECONE_ENVIRONMENT:-us-east-1}
+      - PINECONE_INDEX_NAME=${PINECONE_INDEX_NAME:-medico-knowledge}
+      - FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID}
+      - FIREBASE_PRIVATE_KEY=${FIREBASE_PRIVATE_KEY}
+      - FIREBASE_CLIENT_EMAIL=${FIREBASE_CLIENT_EMAIL}
+      - SECRET_KEY=${SECRET_KEY:-your_secret_key_at_least_32_chars_long}
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+      - DEBUG=true
+      - ALLOWED_ORIGINS=http://localhost:3000,http://localhost,http://127.0.0.1:3000
+      - BACKEND_CORS_ORIGINS=http://localhost:3000,http://localhost,http://127.0.0.1:3000
+    volumes:
+      - uploads_data:/app/uploads
+      - logs_data:/app/logs
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - medico-network
+    restart: unless-stopped
+
+  # Next.js Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: medico-frontend
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1
+      - NODE_ENV=production
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - medico-network
+    restart: unless-stopped
+
+  # Nginx Reverse Proxy (optional - can access frontend/backend directly)
+  nginx:
+    image: nginx:alpine
+    container_name: medico-nginx
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - medico-network
+    restart: unless-stopped
+
+networks:
+  medico-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
+  uploads_data:
+    driver: local
+  logs_data:
+    driver: local
