@@ -3,7 +3,7 @@ Application settings and configuration management.
 Uses Pydantic Settings for environment variable validation.
 """
 
-from typing import List, Optional
+from typing import List, Optional, Union, Any
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
