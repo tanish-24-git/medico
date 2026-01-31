@@ -8,6 +8,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { streamChatMessages, apiRequest, API_ENDPOINTS } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/auth-context';
+import { ProtectedRoute } from '@/components/protected-route';
 
 interface Message {
   id?: number;
@@ -53,7 +54,6 @@ export default function ChatPage() {
   const fetchHistory = useCallback(async (sessionId: number) => {
     try {
       setIsLoading(true);
-      // Construct URL with query param as expected by backend or update API_ENDPOINTS.CHAT.HISTORY
       const data = await apiRequest<{ messages: Message[] }>(`${API_ENDPOINTS.CHAT.HISTORY}?session_id=${sessionId}`);
       setMessages(data.messages.length > 0 ? data.messages : initialMessages);
     } catch (error) {
@@ -68,8 +68,10 @@ export default function ChatPage() {
   }, [toast]);
 
   useEffect(() => {
-    fetchSessions();
-  }, [fetchSessions]);
+    if (user) {
+      fetchSessions();
+    }
+  }, [user, fetchSessions]);
 
   const handleNewChat = () => {
     setMessages(initialMessages);
@@ -112,7 +114,7 @@ export default function ChatPage() {
         
         if (chunk.session_id && !activeSessionId) {
           setActiveSessionId(chunk.session_id);
-          fetchSessions(); // Refresh list to get the new one
+          fetchSessions();
         }
       }
     } catch (error) {
@@ -128,21 +130,23 @@ export default function ChatPage() {
   };
 
   return (
-    <div className="flex h-screen flex-col bg-background">
-      <Navbar />
-      <div className="flex flex-1 overflow-hidden">
-        <ChatSidebar 
-          sessions={sessions} 
-          activeSessionId={activeSessionId}
-          onSessionSelect={handleSessionSelect}
-          onNewChat={handleNewChat}
-          isLoading={isSessionsLoading}
-        />
-        <div className="flex flex-1 flex-col">
-          <ChatWindow messages={messages} isLoading={isLoading} />
-          <ChatInput onSend={handleSendMessage} />
+    <ProtectedRoute>
+      <div className="flex h-screen flex-col bg-background">
+        <Navbar />
+        <div className="flex flex-1 overflow-hidden">
+          <ChatSidebar 
+            sessions={sessions} 
+            activeSessionId={activeSessionId}
+            onSessionSelect={handleSessionSelect}
+            onNewChat={handleNewChat}
+            isLoading={isSessionsLoading}
+          />
+          <div className="flex flex-1 flex-col">
+            <ChatWindow messages={messages} isLoading={isLoading} />
+            <ChatInput onSend={handleSendMessage} />
+          </div>
         </div>
       </div>
-    </div>
+    </ProtectedRoute>
   );
 }

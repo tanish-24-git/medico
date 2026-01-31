@@ -8,6 +8,7 @@ import { Upload, Loader2, FileText } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { apiRequest, uploadFile, API_ENDPOINTS } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
+import { ProtectedRoute } from '@/components/protected-route';
 
 interface Metric {
   label: string;
@@ -55,7 +56,7 @@ export default function ReportsPage() {
     return Object.entries(metrics).map(([key, value]) => ({
       label: key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
       value: String(value),
-      status: 'normal' as const, // Future: Backend could provide status
+      status: 'normal' as const,
     }));
   };
 
@@ -68,106 +69,108 @@ export default function ReportsPage() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-background">
-      <Navbar />
+    <ProtectedRoute>
+      <div className="flex min-h-screen flex-col bg-background">
+        <Navbar />
 
-      <main className="flex-1">
-        <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
-          <div className="mb-12">
-            <h1 className="text-4xl font-bold tracking-tight text-foreground">
-              Your Medical Reports
-            </h1>
-            <p className="mt-2 text-lg text-foreground/70">
-              Upload and manage your health reports. Get instant explanations and insights.
-            </p>
-          </div>
+        <main className="flex-1">
+          <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+            <div className="mb-12">
+              <h1 className="text-4xl font-bold tracking-tight text-foreground">
+                Your Medical Reports
+              </h1>
+              <p className="mt-2 text-lg text-foreground/70">
+                Upload and manage your health reports. Get instant explanations and insights.
+              </p>
+            </div>
 
             <div className="mb-12 flex gap-4">
-            <div className="relative">
-              <input
-                type="file"
-                id="report-upload"
-                className="hidden"
-                accept=".pdf,.jpg,.jpeg,.png"
-                onChange={async (e) => {
-                  const file = e.target.files?.[0];
-                  if (!file) return;
-                  
-                  try {
-                    setIsLoading(true);
-                    toast({
-                      title: "Uploading...",
-                      description: `Uploading ${file.name}`,
-                    });
+              <div className="relative">
+                <input
+                  type="file"
+                  id="report-upload"
+                  className="hidden"
+                  accept=".pdf,.jpg,.jpeg,.png"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
                     
-                    await uploadFile(API_ENDPOINTS.REPORTS.UPLOAD, file);
-                    
-                    toast({
-                      title: "Success",
-                      description: "Report uploaded successfully. It will be processed shortly.",
-                    });
-                    
-                    fetchReports();
-                  } catch (error) {
-                    toast({
-                      title: "Upload Failed",
-                      description: error instanceof Error ? error.message : "An error occurred during upload.",
-                      variant: "destructive",
-                    });
-                  } finally {
-                    setIsLoading(false);
-                  }
-                }}
-              />
-              <Button 
-                size="lg" 
-                className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
-                onClick={() => document.getElementById('report-upload')?.click()}
-                disabled={isLoading}
-              >
-                {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Upload className="h-5 w-5" />}
-                Upload New Report
+                    try {
+                      setIsLoading(true);
+                      toast({
+                        title: "Uploading...",
+                        description: `Uploading ${file.name}`,
+                      });
+                      
+                      await uploadFile(API_ENDPOINTS.REPORTS.UPLOAD, file);
+                      
+                      toast({
+                        title: "Success",
+                        description: "Report uploaded successfully. It will be processed shortly.",
+                      });
+                      
+                      fetchReports();
+                    } catch (error) {
+                      toast({
+                        title: "Upload Failed",
+                        description: error instanceof Error ? error.message : "An error occurred during upload.",
+                        variant: "destructive",
+                      });
+                    } finally {
+                      setIsLoading(false);
+                    }
+                  }}
+                />
+                <Button 
+                  size="lg" 
+                  className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
+                  onClick={() => document.getElementById('report-upload')?.click()}
+                  disabled={isLoading}
+                >
+                  {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Upload className="h-5 w-5" />}
+                  Upload New Report
+                </Button>
+              </div>
+              <Button variant="outline" size="lg" onClick={fetchReports} disabled={isLoading}>
+                {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Refresh'}
               </Button>
             </div>
-            <Button variant="outline" size="lg" onClick={fetchReports} disabled={isLoading}>
-              {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Refresh'}
-            </Button>
-          </div>
 
-          <div className="mb-8">
-            <h2 className="mb-6 text-2xl font-bold text-foreground">Recent Reports</h2>
-            
-            {isLoading ? (
-              <div className="flex h-64 items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              </div>
-            ) : reports.length > 0 ? (
-              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                {reports.map((report) => (
-                  <ReportCard 
-                    key={report.id} 
-                    title={report.filename}
-                    date={formatDate(report.created_at)}
-                    metrics={formatMetrics(report.parsed_metrics)}
-                  />
-                ))}
-              </div>
-            ) : (
-              <div className="flex h-64 flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted p-12 text-center">
-                <div className="mb-4 rounded-full bg-muted p-3">
-                  <FileText className="h-8 w-8 text-muted-foreground" />
+            <div className="mb-8">
+              <h2 className="mb-6 text-2xl font-bold text-foreground">Recent Reports</h2>
+              
+              {isLoading ? (
+                <div className="flex h-64 items-center justify-center">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 </div>
-                <h3 className="text-lg font-medium text-foreground">No reports found</h3>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Upload your first medical report to see it here.
-                </p>
-              </div>
-            )}
+              ) : reports.length > 0 ? (
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                  {reports.map((report) => (
+                    <ReportCard 
+                      key={report.id} 
+                      title={report.filename}
+                      date={formatDate(report.created_at)}
+                      metrics={formatMetrics(report.parsed_metrics)}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="flex h-64 flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted p-12 text-center">
+                  <div className="mb-4 rounded-full bg-muted p-3">
+                    <FileText className="h-8 w-8 text-muted-foreground" />
+                  </div>
+                  <h3 className="text-lg font-medium text-foreground">No reports found</h3>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Upload your first medical report to see it here.
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      </main>
+        </main>
 
-      <Footer />
-    </div>
+        <Footer />
+      </div>
+    </ProtectedRoute>
   );
 }

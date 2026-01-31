@@ -20,9 +20,7 @@ class Settings(BaseSettings):
     
     # API Configuration
     API_V1_PREFIX: str = "/api/v1"
-    ALLOWED_ORIGINS: List[str] = Field(
-        default=["http://localhost:3000", "http://localhost:3001"]
-    )
+    ALLOWED_ORIGINS: Union[List[str], str] = ["http://localhost:3000", "http://localhost:3001"]
     
     # Security
     SECRET_KEY: str = Field(..., min_length=32)
@@ -72,9 +70,23 @@ class Settings(BaseSettings):
     RATE_LIMIT_GLOBAL: int = Field(default=1000)
     
     # CORS
-    BACKEND_CORS_ORIGINS: List[str] = Field(
-        default=["http://localhost:3000", "http://localhost:3001"]
-    )
+    BACKEND_CORS_ORIGINS: Union[List[str], str] = ["http://localhost:3000", "http://localhost:3001"]
+    
+    @field_validator("ALLOWED_ORIGINS", "BACKEND_CORS_ORIGINS", mode="before")
+    @classmethod
+    def assemble_cors_origins(cls, v: any) -> List[str]:
+        """Convert comma-separated string or list to list of origins."""
+        if isinstance(v, str):
+            if v.startswith("[") and v.endswith("]"):
+                import json
+                try:
+                    return json.loads(v)
+                except Exception:
+                    pass
+            return [i.strip() for i in v.split(",") if i.strip()]
+        if isinstance(v, list):
+            return v
+        return ["http://localhost:3000", "http://localhost:3001"]
     
     # Monitoring (Optional)
     SENTRY_DSN: Optional[str] = Field(default=None)
