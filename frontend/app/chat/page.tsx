@@ -30,24 +30,69 @@ const initialMessages: Message[] = [
 
 export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>(initialMessages);
+  const [sessions, setSessions] = useState<ChatSession[]>([]);
+  const [activeSessionId, setActiveSessionId] = useState<number | undefined>();
   const [isLoading, setIsLoading] = useState(false);
+  const [isSessionsLoading, setIsSessionsLoading] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
+
+  const fetchSessions = useCallback(async () => {
+    if (!user) return;
+    try {
+      setIsSessionsLoading(true);
+      const data = await apiRequest<{ sessions: ChatSession[] }>(API_ENDPOINTS.CHAT.SESSIONS);
+      setSessions(data.sessions);
+    } catch (error) {
+      console.error('Fetch sessions error:', error);
+    } finally {
+      setIsSessionsLoading(false);
+    }
+  }, [user]);
+
+  const fetchHistory = useCallback(async (sessionId: number) => {
+    try {
+      setIsLoading(true);
+      // Construct URL with query param as expected by backend or update API_ENDPOINTS.CHAT.HISTORY
+      const data = await apiRequest<{ messages: Message[] }>(`${API_ENDPOINTS.CHAT.HISTORY}?session_id=${sessionId}`);
+      setMessages(data.messages.length > 0 ? data.messages : initialMessages);
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to fetch chat history.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [toast]);
+
+  useEffect(() => {
+    fetchSessions();
+  }, [fetchSessions]);
+
+  const handleNewChat = () => {
+    setMessages(initialMessages);
+    setActiveSessionId(undefined);
+  };
+
+  const handleSessionSelect = (id: number) => {
+    setActiveSessionId(id);
+    fetchHistory(id);
+  };
 
   const handleSendMessage = async (content: string) => {
     if (!content.trim()) return;
 
-    // Add user message
     const userMessage: Message = { role: 'user', content };
     setMessages((prev) => [...prev, userMessage]);
     setIsLoading(true);
 
     try {
       let assistantContent = '';
-      
-      // Add placeholder for assistant message
       setMessages((prev) => [...prev, { role: 'assistant', content: '' }]);
 
-      for await (const chunk of streamChatMessages(content)) {
+      for await (const chunk of streamChatMessages(content, activeSessionId)) {
         if (chunk.content) {
           assistantContent += chunk.content;
           setMessages((prev) => {
@@ -63,6 +108,11 @@ export default function ChatPage() {
             }
             return newMessages;
           });
+        }
+        
+        if (chunk.session_id && !activeSessionId) {
+          setActiveSessionId(chunk.session_id);
+          fetchSessions(); // Refresh list to get the new one
         }
       }
     } catch (error) {
