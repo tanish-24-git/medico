@@ -4,13 +4,21 @@ import { Navbar } from '@/components/navbar';
 import { ChatSidebar } from '@/components/chat-sidebar';
 import { ChatWindow } from '@/components/chat-window';
 import { ChatInput } from '@/components/chat-input';
-import { useState, useEffect } from 'react';
-import { streamChatMessages } from '@/lib/api';
+import { useState, useEffect, useCallback } from 'react';
+import { streamChatMessages, apiRequest, API_ENDPOINTS } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/context/auth-context';
 
 interface Message {
+  id?: number;
   role: 'user' | 'assistant';
   content: string;
+}
+
+interface ChatSession {
+  id: number;
+  title: string;
+  created_at: string;
 }
 
 const initialMessages: Message[] = [
@@ -73,7 +81,13 @@ export default function ChatPage() {
     <div className="flex h-screen flex-col bg-background">
       <Navbar />
       <div className="flex flex-1 overflow-hidden">
-        <ChatSidebar />
+        <ChatSidebar 
+          sessions={sessions} 
+          activeSessionId={activeSessionId}
+          onSessionSelect={handleSessionSelect}
+          onNewChat={handleNewChat}
+          isLoading={isSessionsLoading}
+        />
         <div className="flex flex-1 flex-col">
           <ChatWindow messages={messages} isLoading={isLoading} />
           <ChatInput onSend={handleSendMessage} />
