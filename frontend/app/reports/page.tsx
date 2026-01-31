@@ -6,7 +6,7 @@ import { ReportCard } from '@/components/report-card';
 import { Button } from '@/components/ui/button';
 import { Upload, Loader2, FileText } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { apiRequest, API_ENDPOINTS } from '@/lib/api';
+import { apiRequest, uploadFile, API_ENDPOINTS } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 
 interface Metric {
@@ -82,11 +82,53 @@ export default function ReportsPage() {
             </p>
           </div>
 
-          <div className="mb-12 flex gap-4">
-            <Button size="lg" className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90">
-              <Upload className="h-5 w-5" />
-              Upload New Report
-            </Button>
+            <div className="mb-12 flex gap-4">
+            <div className="relative">
+              <input
+                type="file"
+                id="report-upload"
+                className="hidden"
+                accept=".pdf,.jpg,.jpeg,.png"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  
+                  try {
+                    setIsLoading(true);
+                    toast({
+                      title: "Uploading...",
+                      description: `Uploading ${file.name}`,
+                    });
+                    
+                    await uploadFile(API_ENDPOINTS.REPORTS.UPLOAD, file);
+                    
+                    toast({
+                      title: "Success",
+                      description: "Report uploaded successfully. It will be processed shortly.",
+                    });
+                    
+                    fetchReports();
+                  } catch (error) {
+                    toast({
+                      title: "Upload Failed",
+                      description: error instanceof Error ? error.message : "An error occurred during upload.",
+                      variant: "destructive",
+                    });
+                  } finally {
+                    setIsLoading(false);
+                  }
+                }}
+              />
+              <Button 
+                size="lg" 
+                className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
+                onClick={() => document.getElementById('report-upload')?.click()}
+                disabled={isLoading}
+              >
+                {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Upload className="h-5 w-5" />}
+                Upload New Report
+              </Button>
+            </div>
             <Button variant="outline" size="lg" onClick={fetchReports} disabled={isLoading}>
               {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Refresh'}
             </Button>
